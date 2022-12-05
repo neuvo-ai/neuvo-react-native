@@ -1,0 +1,16 @@
+{
+  "name": "neuvo-react-native",
+  "version": "1.0.0",
+  "main": "neuvo.js",
+  "scripts": {
+  },
+  "peerDependencies": {
+    "react": "18.1.0",
+    "react-native": "0.70.5",
+    "react-native-webview": "^11.25.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.9"
+  },
+  "private": true
+}
