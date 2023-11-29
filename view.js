@@ -1,6 +1,5 @@
-// Import React, WebView, JSON, and Component from react-native
 import React, { Component } from 'react';
-import { WebView, JSON } from 'react-native-webview';
+import { WebView } from 'react-native-webview';
 
 // Create an array of URLs that the WebView is allowed to load
 const allowedUrls = [
@@ -8,10 +7,14 @@ const allowedUrls = [
   'https://*.neuvola.com'
 ];
 
-// Create a component that renders a WebView
+function wrapMessage(data) {
+  return `window.postMessage('${JSON.stringify(data)}')`;
+}
+
 class NeuvoView extends Component {
   constructor(props) {
     super(props);
+    this.loaded = false;
     this.state = {
       data: null,
     };
@@ -19,47 +22,60 @@ class NeuvoView extends Component {
 
   // This function is called when the WebView loads a page
   onLoad = () => {
-    // Send a "ready" event to the parent of the React component
+    if (this.loaded) return;
+    this.loaded = true;
     this.props.onReady();
-  }
+  };
 
   // This function is called when the app receives a message from the WebView
-  onMessage = (event) => {
-    // Update the state with the data from the message
-    this.setState({ data: event.nativeEvent.data });
-  }
+  onMessage = event => {
+    this.setState({data: event.nativeEvent.data});
+  };
 
-  // This function sends a message with the "ask" action to the WebView
-  askQuestion = (content) => {
-    // Create a JSON object with the "ask" action and the specified message payload
+  askQuestion = content => {
     const message = {
       action: 'ask',
       content,
     };
+    this.webview.injectJavaScript(wrapMessage(message));
+  };
 
-    // Send the message to the WebView
-    this.webview.postMessage(JSON.stringify(message));
+  getVersion = () => {
+    const message = {
+      action: 'version'
+    };
+    this.webview.injectJavaScript(wrapMessage(message));
+  };
+
+  setOnline = () => {
+    const message = {
+      action: 'online'
+    };
+    this.webview.injectJavaScript(wrapMessage(message));
   }
 
-  // This function sends a message with the "slots" action to the WebView
-  sendSlots = (content) => {
-    // Create a JSON object with the "slots" action and the specified message payload
+  setOffline = () => {
+    const message = {
+      action: 'offline'
+    };
+    this.webview.injectJavaScript(wrapMessage(message));
+  }
+
+  sendSlots = content => {
     const message = {
       action: 'slots',
       content,
     };
-
-    // Send the message to the WebView
-    this.webview.postMessage(JSON.stringify(message));
-  }
+    this.webview.injectJavaScript(wrapMessage(message));
+  };
 
   render() {
     return (
       <WebView
-        ref={(webview) => this.webview = webview}
+        ref={webview => (this.webview = webview)}
         onLoad={this.onLoad}
         onMessage={this.onMessage}
-        source={{ uri: this.props.url }}
+        source={{uri: this.props.url}}
         originWhitelist={allowedUrls}
         mediaPlaybackRequiresUserAction={false}
       />
@@ -67,4 +83,4 @@ class NeuvoView extends Component {
   }
 }
 
-export { NeuvoView }
+export { NeuvoView };

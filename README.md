@@ -14,10 +14,17 @@ To use the `NeuvoView` component in your app, you first need to import it:
 import NeuvoView from 'neuvo-react-native/view';
 ```
 
+To link the `NeuvoView` component to a ref, you need to create a ref:
+
+```typescript
+  const neuvoViewRef = useRef(null);  // Create a ref
+
+
 Then, you can use the `NeuvoView` component in your app like this:
 
 ```jsx
 <NeuvoView
+  ref={neuvoViewRef}
   url="https://example.neuvo.ai"
   onReady={() => console.log('NeuvoView is ready')}
   onMessage={(data) => console.log(data)}
@@ -34,14 +41,18 @@ The `NeuvoView` component also exposes the following public functions that can b
 
 - `askQuestion(content)`: Sends a message with the `"ask"` action to the WebView.
 - `sendSlots(content)`: Sends a message with the `"slots"` action to the WebView.
+- `setOnline()`: Sends a message with the `"online"` action to the WebView.
+- `setOffline()`: Sends a message with the `"offline"` action to the WebView.
 
 These public functions can be called like this:
 
 ```typescript
 ref={(neuvoView) => this.neuvoView = neuvoView}
 ...
-this.neuvoView.askQuestion('Asking a question');
-this.neuvoView.sendSlots({ age: 15, pregnant: true });
+this.neuvoViewRef.current.askQuestion('Asking a question');
+this.neuvoViewRef.current.sendSlots({ age: 15, pregnant: true });
+this.neuvoViewRef.current.setOnline(); // Tells the bot that we have connectivity
+this.neuvoViewRef.current.setOffline(); // Tells the bot that we don't have connectivity
 ```
 
 ## Notes
