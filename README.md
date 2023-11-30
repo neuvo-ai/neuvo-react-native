@@ -11,7 +11,7 @@ To use the `NeuvoView` component in your React Native app, you can install it by
 To use the `NeuvoView` component in your app, you first need to import it:
 
 ```typescript
-import NeuvoView from 'neuvo-react-native/view';
+import {NeuvoView} from 'neuvo-react-native/view';
 ```
 
 To link the `NeuvoView` component to a ref, you need to create a ref:
@@ -61,3 +61,40 @@ this.neuvoViewRef.current.setOffline(); // Tells the bot that we don't have conn
 - The `mediaPlaybackRequiresUserAction` prop of the `WebView` component is set to `false`, which allows media playback to automatically start when the page is loaded. This can be modified by editing the `mediaPlaybackRequiresUserAction` prop of the `WebView` component in the `NeuvoView` component.
 - The `NeuvoView` component uses the `JSON` object to stringify the messages that are sent to the WebView. This is necessary because the `postMessage` function of the `WebView` component only accepts strings as the message payload.
 
+## Full `App.tsx` example
+
+```typescript
+import React, {useRef} from 'react';
+
+import {NeuvoView} from 'neuvo-react-native/view';
+
+function App(): JSX.Element {
+  const neuvoViewRef: React.MutableRefObject<NeuvoView> = useRef(null); // Create a ref
+
+  return (
+    <NeuvoView
+      ref={neuvoViewRef} // Attach the ref to your component
+      url="https://example.neuvo.ai/?language=en&load-offline=true#offline"
+      onReady={() => {
+        console.log('NeuvoView is ready');
+
+        // Simulating setting it to online in 45 seconds
+        setTimeout(() => {
+          neuvoViewRef.current.setOnline();
+        }, 45000);
+
+        // Simulating asking a question in 30 seconds
+        setTimeout(() => {
+          neuvoViewRef.current.askQuestion('Hello there!'); // Use the ref to call the method
+        }, 30000);
+      }}
+      onMessage={(data: any) => {
+        // Received data from the chat that can be parsed
+        console.log(data);
+      }}
+    />
+  );
+}
+
+export default App;
+```

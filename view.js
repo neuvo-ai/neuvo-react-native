@@ -1,11 +1,8 @@
-import React, { Component } from 'react';
-import { WebView } from 'react-native-webview';
+import React, {Component} from 'react';
+import {WebView} from 'react-native-webview';
 
 // Create an array of URLs that the WebView is allowed to load
-const allowedUrls = [
-  'https://*.neuvo.ai',
-  'https://*.neuvola.com'
-];
+const allowedUrls = ['https://*.neuvo.ai', 'https://*.neuvola.com'];
 
 function wrapMessage(data) {
   return `window.postMessage('${JSON.stringify(data)}')`;
@@ -22,7 +19,9 @@ class NeuvoView extends Component {
 
   // This function is called when the WebView loads a page
   onLoad = () => {
-    if (this.loaded) return;
+    if (this.loaded) {
+      return;
+    }
     this.loaded = true;
     this.props.onReady();
   };
@@ -42,24 +41,24 @@ class NeuvoView extends Component {
 
   getVersion = () => {
     const message = {
-      action: 'version'
+      action: 'version',
     };
     this.webview.injectJavaScript(wrapMessage(message));
   };
 
   setOnline = () => {
     const message = {
-      action: 'online'
+      action: 'online',
     };
     this.webview.injectJavaScript(wrapMessage(message));
-  }
+  };
 
   setOffline = () => {
     const message = {
-      action: 'offline'
+      action: 'offline',
     };
     this.webview.injectJavaScript(wrapMessage(message));
-  }
+  };
 
   sendSlots = content => {
     const message = {
@@ -83,4 +82,4 @@ class NeuvoView extends Component {
   }
 }
 
-export { NeuvoView };
+export {NeuvoView};
