@@ -55,6 +55,29 @@ const NeuvoView = (props) => {
     }
   };
 
+  const updateLocalAssets = async () => {
+    await RNFS.mkdir(LOCAL_PATH).catch(e => console.log(e));
+
+    await downloadFile('model.json');
+    const modelJsonPath = `${LOCAL_PATH}/model.json`;
+    const model = JSON.parse(await RNFS.readFile(modelJsonPath));
+
+    if (model.weightsManifest) {
+        for (const group of model.weightsManifest) {
+            for (const path of group.paths) {
+                await downloadFile(path);
+            }
+        }
+    }
+
+    await downloadFile('files.json');
+    const filesJsonPath = `${LOCAL_PATH}/files.json`;
+    const files = JSON.parse(await RNFS.readFile(filesJsonPath));
+    for (const fileName of files) {
+        await downloadFile(fileName);
+    }
+  };
+
   // This function performs the update
   const performUpdate = async () => {
     try {
