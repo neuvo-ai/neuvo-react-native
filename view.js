@@ -1,85 +1,198 @@
-import React, {Component} from 'react';
-import {WebView} from 'react-native-webview';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import RNFS from '@dr.pogodin/react-native-fs'; // Updated import
+import StaticServer from '@dr.pogodin/react-native-static-server'; // Updated import
+import { WebView } from 'react-native-webview';
 
-// Create an array of URLs that the WebView is allowed to load
+const BASE_URL = 'https://url'; // TODO: use the correct URL here
+const LOCAL_PATH = `${RNFS.DocumentDirectoryPath}/`;
+let server = null;
+
+// Adjust the allowed URLs as per your requirements
 const allowedUrls = ['https://*.neuvo.ai', 'https://*.neuvola.com'];
 
 function wrapMessage(data) {
-  return `window.postMessage('${JSON.stringify(data)}')`;
+  return `window.postMessage('${JSON.stringify(data)}', '*')`;
 }
 
-class NeuvoView extends Component {
-  constructor(props) {
-    super(props);
-    this.loaded = false;
-    this.state = {
-      data: null,
-    };
-  }
+const NeuvoView = (props) => {
+  const [spaUrl, setSpaUrl] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const webviewRef = useRef(null);
 
-  // This function is called when the WebView loads a page
-  onLoad = () => {
-    if (this.loaded) {
+  useEffect(() => {
+    // TODO: This is automatic at the moment but we can split it into an interaction
+    checkForUpdates();
+    return () => {
+      if (server) {
+        server.stop();
+      }
+    };
+  }, []);
+
+  // This function only checks for updates and decides whether an update is needed.
+  const checkForUpdates = async () => {
+    try {
+      const serverVersionResponse = await fetch(`${BASE_URL}/version.json`);
+      const serverVersion = await serverVersionResponse.json();
+      const localVersionPath = `${LOCAL_PATH}/version.json`;
+      const localVersionExists = await RNFS.exists(localVersionPath);
+      let localVersion = null;
+      if (localVersionExists) {
+        localVersion = JSON.parse(await RNFS.readFile(localVersionPath));
+      }
+      if (!localVersion || serverVersion.build !== localVersion.build) {
+        // If versions differ, trigger update process through user interaction
+        return true; // Indicate that an update is needed
+      }
+      return false; // No update needed
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      setError('Failed to check for updates'); // Set error state
+      throw new Error('Failed to check for updates');
+    }
+  };
+
+  // This function performs the update
+  const performUpdate = async () => {
+    try {
+      await updateLocalAssets();
+      const serverVersionResponse = await fetch(`${BASE_URL}/version.json`);
+      const serverVersion = await serverVersionResponse.json();
+      const localVersionPath = `${LOCAL_PATH}/version.json`;
+      await RNFS.writeFile(localVersionPath, JSON.stringify(serverVersion), 'utf8');
+      startLocalServer();
+    } catch (error) {
+      console.error('Error updating assets:', error);
+      setError('Failed to update assets');
+      throw new Error('Failed to update assets');
+    }
+  };
+
+  const downloadFile = async (fileName) => {
+    const url = `${BASE_URL}/${fileName}`;
+    const localFilePath = `${LOCAL_PATH}/${fileName}`;
+
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      const lastModifiedRemote = response.headers.get('last-modified');
+      const etagRemote = response.headers.get('etag');
+
+      const fileInfo = await RNFS.stat(localFilePath).catch(() => null);
+      if (fileInfo && fileInfo.mtime) {
+        const lastModifiedLocal = new Date(fileInfo.mtime).toGMTString();
+
+        if (lastModifiedRemote === lastModifiedLocal) {
+          console.log(`${fileName} is up to date. No download needed.`);
+          return;
+        }
+      }
+
+      const contentResponse = await fetch(url);
+      const content = await contentResponse.text();
+      await RNFS.writeFile(localFilePath, content, 'utf8');
+    } catch (error) {
+      console.error(`Error downloading ${fileName}:`, error);
+      throw new Error(`Failed to download ${fileName}`);
+    }
+  };
+
+  const startLocalServer = () => {
+    if (server) {
+      server.stop();
+    }
+    server = new StaticServer(1337, LOCAL_PATH);
+    server.start().then(url => {
+      console.log(`Serving Neuvo chat at ${url}`);
+      setSpaUrl(url);
+    });
+  };
+
+  const onLoad = () => {
+    if (loaded) {
       return;
     }
-    this.loaded = true;
-    this.props.onReady();
+    setLoaded(true);
+    props.onReady && props.onReady();
   };
 
-  // This function is called when the app receives a message from the WebView
-  onMessage = event => {
-    this.setState({data: event.nativeEvent.data});
+  const onMessage = (event) => {
+    setData(event.nativeEvent.data);
   };
 
-  askQuestion = content => {
+  const askQuestion = (content) => {
     const message = {
       action: 'ask',
       content,
     };
-    this.webview.injectJavaScript(wrapMessage(message));
+    webviewRef.current.injectJavaScript(wrapMessage(message));
   };
 
-  getVersion = () => {
+  const getVersion = () => {
     const message = {
       action: 'version',
     };
-    this.webview.injectJavaScript(wrapMessage(message));
+    webviewRef.current.injectJavaScript(wrapMessage(message));
   };
 
-  setOnline = () => {
+  const setOnline = () => {
     const message = {
       action: 'online',
     };
-    this.webview.injectJavaScript(wrapMessage(message));
+    webviewRef.current.injectJavaScript(wrapMessage(message));
   };
 
-  setOffline = () => {
+  const setOffline = () => {
     const message = {
       action: 'offline',
     };
-    this.webview.injectJavaScript(wrapMessage(message));
+    webviewRef.current.injectJavaScript(wrapMessage(message));
   };
 
-  sendSlots = content => {
+  const sendSlots = (content) => {
     const message = {
       action: 'slots',
       content,
     };
-    this.webview.injectJavaScript(wrapMessage(message));
+    webviewRef.current.injectJavaScript(wrapMessage(message));
   };
 
-  render() {
-    return (
-      <WebView
-        ref={webview => (this.webview = webview)}
-        onLoad={this.onLoad}
-        onMessage={this.onMessage}
-        source={{uri: this.props.url}}
-        originWhitelist={allowedUrls}
-        mediaPlaybackRequiresUserAction={false}
-      />
-    );
-  }
-}
+  return (
+    <View style={styles.container}>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+      {spaUrl ? (
+        <WebView
+          ref={webviewRef}
+          onLoad={onLoad}
+          onMessage={onMessage}
+          source={{ uri: spaUrl }}
+          originWhitelist={['*']} // Adjust as necessary
+          allowUniversalAccessFromFileURLs={true} // This might be necessary for local-HTTP to HTTPS requests
+          mediaPlaybackRequiresUserAction={false}
+        />
+      ) : (
+        <View style={styles.loadingContainer}>
+          {/* TODO: do we have some error indicator we could use? */}
+        </View>
+      )}
+    </View>
+  );
+};
 
-export {NeuvoView};
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  webview: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
+export { NeuvoView };

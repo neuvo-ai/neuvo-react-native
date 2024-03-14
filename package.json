@@ -1,13 +1,15 @@
 {
   "name": "neuvo-react-native",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "neuvo.js",
   "scripts": {
   },
   "peerDependencies": {
-    "react": "18.1.0",
-    "react-native": "0.70.5",
-    "react-native-webview": "^11.25.0"
+    "react": "18.2.0",
+    "react-native": "0.73.6",
+    "react-native-webview": "^13.8.1",
+    "@dr.pogodin/react-native-static-server": "^0.11.0",
+    "@dr.pogodin/react-native-fs": "2.24.1"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9"
